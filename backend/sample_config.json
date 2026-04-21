@@ -1,0 +1,50 @@
+{
+  "reference_size": {
+    "width": 1200,
+    "height": 800
+  },
+  "fields": [
+    {
+      "id": "name",
+      "template": "{{name}}",
+      "position": {
+        "x": 600,
+        "y": 340
+      },
+      "style": {
+        "font_size": 54,
+        "color": "#000000",
+        "align": "center",
+        "font_path": ""
+      }
+    },
+    {
+      "id": "college",
+      "template": "{{college}}",
+      "position": {
+        "x": 600,
+        "y": 415
+      },
+      "style": {
+        "font_size": 30,
+        "color": "#111111",
+        "align": "center",
+        "font_path": ""
+      }
+    },
+    {
+      "id": "event",
+      "template": "{{event}}",
+      "position": {
+        "x": 600,
+        "y": 470
+      },
+      "style": {
+        "font_size": 26,
+        "color": "#1a1a1a",
+        "align": "center",
+        "font_path": ""
+      }
+    }
+  ]
+}
