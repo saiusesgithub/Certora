@@ -415,6 +415,11 @@ body,
   font-size: 0.95rem;
 }
 
+.progress-count {
+  color: #c8c8c8;
+  font-size: 0.9rem;
+}
+
 .success-actions {
   margin-top: 10px;
   display: flex;
