@@ -1,5 +1,6 @@
 import { useState } from "react";
 import UploadCard from "./UploadCard";
+import type { TemplateSelectionResult } from "./editorTypes";
 
 const allowedExtensions = ["png", "jpg", "jpeg", "pdf"];
 
@@ -27,7 +28,11 @@ const readImageDimensions = (file: File): Promise<{ width: number; height: numbe
   });
 };
 
-const TemplateSelection = () => {
+type TemplateSelectionProps = {
+  onTemplateSelected: (template: TemplateSelectionResult) => void;
+};
+
+const TemplateSelection = ({ onTemplateSelected }: TemplateSelectionProps) => {
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -44,6 +49,10 @@ const TemplateSelection = () => {
 
     setSelectedFileName(file.name);
     setErrorMessage(null);
+    onTemplateSelected({
+      file,
+      type: extension === "pdf" ? "pdf" : "image",
+    });
 
     if (extension === "pdf") {
       setDimensions(null);
