@@ -21,7 +21,7 @@ const createInitialFields = (data: EditorPageData | null): EditorField[] => {
       y: 220,
       fontSize: 48,
       fontFamily: "Playfair Display",
-      fill: "#f0f0f0",
+      fill: "#000000",
       align: "center",
       bold: true,
       locked: false,
@@ -36,7 +36,7 @@ const createInitialFields = (data: EditorPageData | null): EditorField[] => {
       y: 300,
       fontSize: 26,
       fontFamily: "Montserrat",
-      fill: "#e2e2e2",
+      fill: "#000000",
       align: "center",
       bold: false,
       locked: false,
@@ -51,7 +51,7 @@ const createInitialFields = (data: EditorPageData | null): EditorField[] => {
       y: 360,
       fontSize: 24,
       fontFamily: "Poppins",
-      fill: "#d8d8d8",
+      fill: "#000000",
       align: "center",
       bold: false,
       locked: false,
@@ -63,7 +63,7 @@ const createInitialFields = (data: EditorPageData | null): EditorField[] => {
 const CertificateEditor = ({ template, data }: CertificateEditorProps) => {
   const [fields, setFields] = useState<EditorField[]>(() => createInitialFields(data));
   const [selectedFieldId, setSelectedFieldId] = useState<EditorField["id"] | null>("name");
-  const [showGrid, setShowGrid] = useState(true);
+  const [showGrid, setShowGrid] = useState(false);
   const [zoom, setZoom] = useState(1);
 
   const dataEntries = useMemo(() => data?.dataEntries ?? [], [data]);
