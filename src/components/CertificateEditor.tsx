@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import CanvasEditor from "./CanvasEditor";
 import FieldCard from "./FieldCard";
 import type { EditorField, EditorPageData, TemplateSelectionResult } from "./editorTypes";
@@ -7,6 +7,13 @@ type CertificateEditorProps = {
   template: TemplateSelectionResult | null;
   data: EditorPageData | null;
 };
+
+const generatingMessages = [
+  "Aligning pixels and printing dreams...",
+  "Crafting certificates, one name at a time...",
+  "Almost there... just making it perfect.",
+  "Good things take milliseconds here.",
+];
 
 const createInitialFields = (data: EditorPageData | null): EditorField[] => {
   const firstName = data?.dataEntries[0] ?? "First Name";
@@ -65,6 +72,8 @@ const CertificateEditor = ({ template, data }: CertificateEditorProps) => {
   const [selectedFieldId, setSelectedFieldId] = useState<EditorField["id"] | null>("name");
   const [showGrid, setShowGrid] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [messageIndex, setMessageIndex] = useState(0);
 
   const dataEntries = useMemo(() => data?.dataEntries ?? [], [data]);
 
@@ -92,6 +101,30 @@ const CertificateEditor = ({ template, data }: CertificateEditorProps) => {
       setSelectedFieldId(null);
     }
   };
+
+  useEffect(() => {
+    if (!isGenerating) {
+      return;
+    }
+
+    const interval = window.setInterval(() => {
+      setMessageIndex((current) => (current + 1) % generatingMessages.length);
+    }, 2500);
+
+    return () => window.clearInterval(interval);
+  }, [isGenerating]);
+
+  if (isGenerating) {
+    return (
+      <section className="generating-screen" aria-label="Generating certificates">
+        <div className="generating-content">
+          <div className="generating-spinner" aria-hidden="true" />
+          <h2>Generating your certificates...</h2>
+          <p>{generatingMessages[messageIndex]}</p>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="editor-page" aria-label="Certificate editor page">
@@ -155,7 +188,11 @@ const CertificateEditor = ({ template, data }: CertificateEditorProps) => {
         />
 
         <div className="generate-button-wrap">
-          <button type="button" className="primary-action-button generate-button">
+          <button
+            type="button"
+            className="primary-action-button generate-button"
+            onClick={() => setIsGenerating(true)}
+          >
             Generate Certificates
           </button>
         </div>
