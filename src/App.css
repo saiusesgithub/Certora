@@ -415,6 +415,14 @@ body,
   font-size: 0.95rem;
 }
 
+.success-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 .generating-spinner {
   width: 28px;
   height: 28px;

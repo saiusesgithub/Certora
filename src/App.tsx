@@ -35,7 +35,15 @@ function App() {
           }}
         />
       ) : (
-        <CertificateEditor template={selectedTemplate} data={editorData} />
+        <CertificateEditor
+          template={selectedTemplate}
+          data={editorData}
+          onGenerateMore={() => {
+            setSelectedTemplate(null);
+            setEditorData(null);
+            setCurrentPage("templateSelection");
+          }}
+        />
       )}
       <Footer />
     </main>
