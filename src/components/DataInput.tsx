@@ -119,6 +119,8 @@ const DataInput = ({ templateName, templateType, onContinue }: DataInputProps) =
       templateName,
       templateType,
       dataEntries: entries,
+      inputType: activeInputType === "csv" ? "csv" : "text",
+      inputContent: activeInputType === "csv" ? csvText : pastedData,
       collegeName: collegeName.trim(),
       eventName: eventName.trim(),
     });

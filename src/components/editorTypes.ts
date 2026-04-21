@@ -2,6 +2,8 @@ export type EditorPageData = {
   templateName: string | null;
   templateType: "image" | "pdf" | null;
   dataEntries: string[];
+  inputType: "csv" | "text";
+  inputContent: string;
   collegeName: string;
   eventName: string;
 };
