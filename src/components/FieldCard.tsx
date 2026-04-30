@@ -9,7 +9,21 @@ type FieldCardProps = {
   onRemove: () => void;
 };
 
-const fontFamilies = ["Segoe UI", "Poppins", "Montserrat", "Playfair Display"];
+const fontFamilies = [
+  // Bundled fonts
+  "Poppins",
+  "Montserrat",
+  "Outfit",
+  "Playfair Display",
+  "Cormorant",
+  "Lora",
+  "Merriweather",
+  "Cinzel",
+  "Great Vibes",
+  "Pacifico",
+  "Satisfy",
+  "Tangerine",
+];
 const alignments: FieldAlignment[] = ["left", "center", "right"];
 
 const FieldCard = ({ field, showRemove, selected, onSelect, onChange, onRemove }: FieldCardProps) => {

@@ -188,6 +188,7 @@ const CertificateEditor = ({ template, data, onGenerateMore }: CertificateEditor
               font_size: field.fontSize,
               color: field.fill,
               align: field.align,
+              font_family: field.fontFamily,
               font_path: "",
             },
           })),

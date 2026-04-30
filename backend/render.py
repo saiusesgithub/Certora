@@ -38,6 +38,24 @@ def _load_font(font_path: str | None, font_size: int) -> ImageFont.FreeTypeFont 
     return ImageFont.load_default()
 
 
+def _find_font_file_for_family(font_family: str | None, search_dirs: list[Path]) -> str | None:
+    if not font_family:
+        return None
+
+    normalized = "".join(ch.lower() for ch in font_family if ch.isalnum())
+
+    for d in search_dirs:
+        try:
+            for p in d.glob("**/*.ttf"):
+                name = "".join(ch.lower() for ch in p.stem if ch.isalnum())
+                if normalized in name or name in normalized:
+                    return str(p)
+        except OSError:
+            continue
+
+    return None
+
+
 def _resolve_position(
     field: Dict[str, object],
     image_width: int,
@@ -78,6 +96,7 @@ def _draw_field(
     row: Dict[str, str],
     image_size: Tuple[int, int],
     reference_size: Tuple[int | None, int | None],
+    search_dirs: list[Path] | None = None,
 ) -> None:
     style = field.get("style", {})
     if not isinstance(style, dict):
@@ -89,6 +108,18 @@ def _draw_field(
 
     font_size = int(style.get("font_size", 40))
     font_path = style.get("font_path")
+
+    # support config keys that may use font family names instead of a file path
+    if not font_path:
+        font_family = style.get("font_family") or style.get("fontFamily") or style.get("font")
+        if isinstance(font_family, str):
+            dirs = search_dirs or []
+            # also check backend/fonts relative to this script
+            dirs = dirs + [Path(__file__).parent / "fonts"]
+            found = _find_font_file_for_family(font_family, dirs)
+            if found:
+                font_path = found
+
     font = _load_font(str(font_path) if font_path else None, font_size)
 
     color = _parse_color(style.get("color", "#000000"))
@@ -156,6 +187,7 @@ def render_certificates(
                     row,
                     image_size=image.size,
                     reference_size=(ref_width, ref_height),
+                    search_dirs=[image_path.parent],
                 )
 
         safe_name = "".join(c for c in row.get("name", f"certificate_{idx}") if c.isalnum() or c in (" ", "-", "_"))

@@ -154,6 +154,30 @@ fn generate_certificates(app: tauri::AppHandle, payload: GeneratePayload) -> Res
         .map_err(|e| format!("Failed to write input data file: {e}"))?;
 
     let script_path = find_backend_script()?;
+    // If the backend ships with a `fonts/` directory, copy any .ttf/.otf files
+    // into the job directory so the Python renderer can find them by filename.
+    if let Some(backend_dir) = script_path.parent() {
+        let fonts_src = backend_dir.join("fonts");
+        if fonts_src.exists() {
+            let fonts_dest = job_dir.join("fonts");
+            fs::create_dir_all(&fonts_dest)
+                .map_err(|e| format!("Failed to create fonts dest {}: {e}", fonts_dest.display()))?;
+
+            for entry in fs::read_dir(&fonts_src).map_err(|e| format!("Failed to read fonts dir: {e}"))? {
+                let entry = entry.map_err(|e| format!("Failed to read fonts dir entry: {e}"))?;
+                let path = entry.path();
+                if path.is_file() {
+                    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                        if ext.eq_ignore_ascii_case("ttf") || ext.eq_ignore_ascii_case("otf") {
+                            let dest = fonts_dest.join(entry.file_name());
+                            fs::copy(&path, &dest)
+                                .map_err(|e| format!("Failed to copy font {}: {e}", path.display()))?;
+                        }
+                    }
+                }
+            }
+        }
+    }
     let args = vec![
         "--background".to_string(),
         template_path.to_string_lossy().to_string(),
