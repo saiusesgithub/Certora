@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, CircularProgress, Progress } from '@pikoloo/darwin-ui'
 import DataInput from './DataInput'
 import CanvasEditorPage from './CanvasEditorPage'
@@ -14,6 +13,16 @@ const loadingMessages = [
 ]
 
 type GenerationState = 'idle' | 'loading' | 'success'
+
+type GenerateField = {
+  id: string
+  label: string
+  x: number
+  y: number
+  fontSize: number
+  color: string
+  fontFamily: string
+}
 
 type LoadingScreenProps = {
   message: string
@@ -44,10 +53,11 @@ function LoadingScreen({ message, progress, total }: LoadingScreenProps) {
 }
 
 type SuccessScreenProps = {
+  onDownload: () => void
   onGenerateMore: () => void
 }
 
-function SuccessScreen({ onGenerateMore }: SuccessScreenProps) {
+function SuccessScreen({ onDownload, onGenerateMore }: SuccessScreenProps) {
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#0f0f0f] px-6 text-center text-white">
       <section className="flex flex-col items-center gap-6">
@@ -59,7 +69,7 @@ function SuccessScreen({ onGenerateMore }: SuccessScreenProps) {
           <Button
             variant="primary"
             size="lg"
-            onClick={() => console.log('Download ZIP')}
+            onClick={onDownload}
           >
             Download ZIP
           </Button>
@@ -79,6 +89,70 @@ function SuccessScreen({ onGenerateMore }: SuccessScreenProps) {
   )
 }
 
+type ErrorScreenProps = {
+  message: string
+  onBack: () => void
+}
+
+function ErrorScreen({ message, onBack }: ErrorScreenProps) {
+  return (
+    <main className="flex min-h-screen items-center justify-center bg-[#0f0f0f] px-6 text-center text-white">
+      <section className="flex max-w-md flex-col items-center gap-5">
+        <div className="flex flex-col gap-3">
+          <h1 className="text-3xl font-semibold">Generation Failed</h1>
+          <p className="text-sm text-white/55">{message}</p>
+        </div>
+        <Button variant="secondary" size="lg" onClick={onBack}>
+          Back to Editor
+        </Button>
+      </section>
+    </main>
+  )
+}
+
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result))
+    reader.onerror = () => reject(new Error('Could not read template file'))
+    reader.readAsDataURL(file)
+  })
+}
+
+async function getNamesList(csvFile: File | null, pastedText: string) {
+  const pastedNames = pastedText
+    .split('\n')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+
+  if (pastedNames.length > 0) {
+    return pastedNames
+  }
+
+  if (!csvFile) {
+    return ['Recipient Name']
+  }
+
+  const csvText = await csvFile.text()
+  return csvText
+    .split(/\r?\n/)
+    .flatMap((line) => line.split(','))
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+}
+
+function downloadBlob(blob: Blob) {
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+
+  link.href = url
+  link.download = 'certificates.zip'
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
 function App() {
   const [page, setPage] = useState<'landing' | 'templates' | 'data' | 'editor'>(
     'landing',
@@ -87,18 +161,14 @@ function App() {
     useState<GenerationState>('idle')
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0)
   const [generatedCount, setGeneratedCount] = useState(0)
+  const [generationTotal, setGenerationTotal] = useState(1)
+  const [zipBlob, setZipBlob] = useState<Blob | null>(null)
+  const [errorMessage, setErrorMessage] = useState('')
   const [templateFile, setTemplateFile] = useState<File | null>(null)
   const [csvFile, setCsvFile] = useState<File | null>(null)
   const [pastedText, setPastedText] = useState('')
   const [collegeName, setCollegeName] = useState('')
   const [eventName, setEventName] = useState('')
-  const totalCertificates = Math.max(
-    1,
-    pastedText
-      .split('\n')
-      .map((entry) => entry.trim())
-      .filter(Boolean).length,
-  )
 
   useEffect(() => {
     if (generationState !== 'loading') {
@@ -113,9 +183,8 @@ function App() {
 
     const progressTimer = window.setInterval(() => {
       setGeneratedCount((currentCount) => {
-        if (currentCount >= totalCertificates) {
+        if (currentCount >= generationTotal - 1) {
           window.clearInterval(progressTimer)
-          window.setTimeout(() => setGenerationState('success'), 250)
           return currentCount
         }
 
@@ -127,13 +196,16 @@ function App() {
       window.clearInterval(messageTimer)
       window.clearInterval(progressTimer)
     }
-  }, [generationState, totalCertificates])
+  }, [generationState, generationTotal])
 
   function resetToLanding() {
     setGenerationState('idle')
     setPage('landing')
     setLoadingMessageIndex(0)
     setGeneratedCount(0)
+    setGenerationTotal(1)
+    setZipBlob(null)
+    setErrorMessage('')
     setTemplateFile(null)
     setCsvFile(null)
     setPastedText('')
@@ -141,18 +213,99 @@ function App() {
     setEventName('')
   }
 
+  async function generateCertificates(fields: GenerateField[]) {
+    if (generationState !== 'idle') {
+      return
+    }
+
+    setErrorMessage('')
+    setLoadingMessageIndex(0)
+    setGeneratedCount(0)
+    setGenerationState('loading')
+
+    try {
+      const names = await getNamesList(csvFile, pastedText)
+      const templateData = templateFile ? await fileToDataUrl(templateFile) : ''
+
+      setGenerationTotal(Math.max(1, names.length))
+
+      const response = await fetch('http://localhost:8000/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          templatePath: '',
+          templateData,
+          fields: fields.map((field) => ({
+            type: field.id,
+            text: `{{${field.id}}}`,
+            x: Math.round(field.x),
+            y: Math.round(field.y),
+            fontSize: Math.round(field.fontSize),
+            color: field.color,
+            fontFamily: field.fontFamily,
+          })),
+          data: names,
+          college: collegeName,
+          event: eventName,
+        }),
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        let message = errorText || 'Certificate generation failed'
+
+        try {
+          const parsedError = JSON.parse(errorText) as { detail?: string }
+          message = parsedError.detail || message
+        } catch {
+          message = errorText || 'Certificate generation failed'
+        }
+
+        throw new Error(message)
+      }
+
+      const zip = await response.blob()
+      setZipBlob(zip)
+      setGeneratedCount(Math.max(1, names.length))
+      downloadBlob(zip)
+      setGenerationState('success')
+    } catch (error) {
+      setGenerationState('idle')
+      setErrorMessage(
+        error instanceof Error ? error.message : 'Certificate generation failed',
+      )
+    }
+  }
+
+  function downloadLatestZip() {
+    if (zipBlob) {
+      downloadBlob(zipBlob)
+    }
+  }
+
   if (generationState === 'loading') {
     return (
       <LoadingScreen
         message={loadingMessages[loadingMessageIndex]}
         progress={generatedCount}
-        total={totalCertificates}
+        total={generationTotal}
       />
     )
   }
 
   if (generationState === 'success') {
-    return <SuccessScreen onGenerateMore={resetToLanding} />
+    return (
+      <SuccessScreen
+        onDownload={downloadLatestZip}
+        onGenerateMore={resetToLanding}
+      />
+    )
+  }
+
+  if (errorMessage) {
+    return <ErrorScreen message={errorMessage} onBack={() => setErrorMessage('')} />
   }
 
   if (page === 'editor') {
@@ -162,15 +315,7 @@ function App() {
         pastedText={pastedText}
         collegeName={collegeName}
         eventName={eventName}
-        onGenerate={() => {
-          if (generationState !== 'idle') {
-            return
-          }
-
-          setLoadingMessageIndex(0)
-          setGeneratedCount(0)
-          setGenerationState('loading')
-        }}
+        onGenerate={generateCertificates}
       />
     )
   }

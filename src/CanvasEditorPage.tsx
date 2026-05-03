@@ -39,7 +39,7 @@ type CanvasEditorPageProps = {
   pastedText: string
   collegeName: string
   eventName: string
-  onGenerate: () => void
+  onGenerate: (fields: EditorField[]) => void
 }
 
 type FieldCardProps = {
@@ -745,7 +745,7 @@ function CanvasEditorPage({
           textNodesRef.current[id] = node
         }}
         onTemplateSizeChange={setTemplateSize}
-        onGenerate={onGenerate}
+        onGenerate={() => onGenerate(fields)}
       />
     </main>
   )
