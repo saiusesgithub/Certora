@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useRef } from 'react'
 import {
   Button,
   Card,
@@ -21,6 +21,18 @@ Rules:
 type CsvUploadCardProps = {
   csvFile: File | null
   onCsvFileChange: (file: File | null) => void
+}
+
+type DataInputProps = {
+  csvFile: File | null
+  pastedText: string
+  collegeName: string
+  eventName: string
+  onCsvFileChange: (file: File | null) => void
+  onPastedTextChange: (value: string) => void
+  onCollegeNameChange: (value: string) => void
+  onEventNameChange: (value: string) => void
+  onContinue: () => void
 }
 
 function CsvUploadCard({ csvFile, onCsvFileChange }: CsvUploadCardProps) {
@@ -151,16 +163,21 @@ function OptionalFieldsSection({
   )
 }
 
-function DataInput() {
-  const [csvFile, setCsvFile] = useState<File | null>(null)
-  const [pastedText, setPastedText] = useState('')
-  const [collegeName, setCollegeName] = useState('')
-  const [eventName, setEventName] = useState('')
-
+function DataInput({
+  csvFile,
+  pastedText,
+  collegeName,
+  eventName,
+  onCsvFileChange,
+  onPastedTextChange,
+  onCollegeNameChange,
+  onEventNameChange,
+  onContinue,
+}: DataInputProps) {
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-12">
       <section className="flex w-full max-w-[700px] flex-col gap-7">
-        <CsvUploadCard csvFile={csvFile} onCsvFileChange={setCsvFile} />
+        <CsvUploadCard csvFile={csvFile} onCsvFileChange={onCsvFileChange} />
 
         <div className="flex items-center justify-center text-xs font-medium text-white/35">
           OR
@@ -168,15 +185,20 @@ function DataInput() {
 
         <PasteDataSection
           pastedText={pastedText}
-          onPastedTextChange={setPastedText}
+          onPastedTextChange={onPastedTextChange}
         />
 
         <OptionalFieldsSection
           collegeName={collegeName}
           eventName={eventName}
-          onCollegeNameChange={setCollegeName}
-          onEventNameChange={setEventName}
+          onCollegeNameChange={onCollegeNameChange}
+          onEventNameChange={onEventNameChange}
         />
+        <div className="flex justify-center">
+          <Button variant="primary" size="lg" onClick={onContinue}>
+            Continue to Editor
+          </Button>
+        </div>
       </section>
     </main>
   )

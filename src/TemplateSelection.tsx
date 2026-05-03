@@ -13,11 +13,11 @@ import {
 const acceptedTemplateTypes = '.png,.jpg,.jpeg,.pdf'
 
 type TemplateSelectionProps = {
-  onTemplateSelected: () => void
+  onTemplateSelected: (file: File | null) => void
 }
 
 type UploadTemplateCardProps = {
-  onTemplateSelected: () => void
+  onTemplateSelected: (file: File) => void
 }
 
 function UploadTemplateCard({ onTemplateSelected }: UploadTemplateCardProps) {
@@ -28,7 +28,7 @@ function UploadTemplateCard({ onTemplateSelected }: UploadTemplateCardProps) {
   function handleSelectedFile(file?: File) {
     if (file) {
       setSelectedFile(file)
-      onTemplateSelected()
+      onTemplateSelected(file)
     }
   }
 
@@ -103,7 +103,11 @@ function TemplateGalleryCard({ onTemplateSelected }: TemplateSelectionProps) {
         <CardDescription>Choose from pre-made templates</CardDescription>
       </CardHeader>
       <CardContent>
-        <Button variant="secondary" fullWidth onClick={onTemplateSelected}>
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={() => onTemplateSelected(null)}
+        >
           Browse Templates
         </Button>
       </CardContent>
