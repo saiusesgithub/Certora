@@ -1,5 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Image as KonvaImage, Layer, Rect, Stage, Text, Transformer } from 'react-konva'
+import {
+  Group,
+  Image as KonvaImage,
+  Layer,
+  Line,
+  Rect,
+  Stage,
+  Text,
+  Transformer,
+} from 'react-konva'
 import type Konva from 'konva'
 import {
   Button,
@@ -26,6 +35,7 @@ type EditorField = {
   fontSize: number
   color: string
   align: TextAlign
+  locked: boolean
 }
 
 type CanvasEditorPageProps = {
@@ -82,6 +92,7 @@ function createInitialFields(
       fontSize: 46,
       color: '#ffffff',
       align: 'center',
+      locked: false,
     },
   ]
 
@@ -98,6 +109,7 @@ function createInitialFields(
       fontSize: 24,
       color: '#ffffff',
       align: 'center',
+      locked: false,
     })
   }
 
@@ -114,6 +126,7 @@ function createInitialFields(
       fontSize: 22,
       color: '#ffffff',
       align: 'center',
+      locked: false,
     })
   }
 
@@ -146,6 +159,14 @@ function FieldCard({
   onUpdate,
   onRemove,
 }: FieldCardProps) {
+  function updateIntegerValue(key: 'fontSize' | 'x' | 'y', value: string) {
+    const parsedValue = Number.parseInt(value, 10)
+
+    if (Number.isFinite(parsedValue)) {
+      onUpdate(field.id, { [key]: parsedValue })
+    }
+  }
+
   return (
     <Card
       className={[
@@ -157,18 +178,30 @@ function FieldCard({
     >
       <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
         <CardTitle className="text-base">{field.label}</CardTitle>
-        {field.optional ? (
+        <div className="flex items-center gap-2">
           <Button
-            variant="ghost"
+            variant={field.locked ? 'primary' : 'secondary'}
             size="sm"
             onClick={(event) => {
               event.stopPropagation()
-              onRemove(field.id)
+              onUpdate(field.id, { locked: !field.locked })
             }}
           >
-            X
+            Lock
           </Button>
-        ) : null}
+          {field.optional ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={(event) => {
+                event.stopPropagation()
+                onRemove(field.id)
+              }}
+            >
+              X
+            </Button>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
         <label className="flex flex-col gap-2 text-xs text-white/45">
@@ -182,29 +215,56 @@ function FieldCard({
           />
         </label>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-[1fr_auto] gap-3">
           <label className="flex flex-col gap-2 text-xs text-white/45">
             Font size
-            <Input
-              type="number"
-              min={8}
-              value={field.fontSize}
-              onChange={(event) =>
-                onUpdate(field.id, {
-                  fontSize: Number(event.target.value) || field.fontSize,
-                })
-              }
-            />
+            <div className="grid grid-cols-[1fr_auto_auto] gap-2">
+              <Input
+                inputMode="numeric"
+                value={Math.round(field.fontSize)}
+                onChange={(event) =>
+                  updateIntegerValue('fontSize', event.target.value)
+                }
+              />
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  onUpdate(field.id, {
+                    fontSize: Math.max(8, Math.round(field.fontSize) - 10),
+                  })
+                }
+              >
+                -
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  onUpdate(field.id, { fontSize: Math.round(field.fontSize) + 10 })
+                }
+              >
+                +
+              </Button>
+            </div>
           </label>
           <label className="flex flex-col gap-2 text-xs text-white/45">
             Color
-            <Input
-              type="color"
-              value={field.color}
-              onChange={(event) =>
-                onUpdate(field.id, { color: event.target.value })
-              }
-            />
+            <div className="relative h-10 w-12 overflow-hidden rounded-md border border-white/15 bg-white/[0.03]">
+              <span
+                className="block h-full w-full"
+                style={{ backgroundColor: field.color }}
+              />
+              <Input
+                type="color"
+                value={field.color}
+                aria-label={`${field.label} color`}
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                onChange={(event) =>
+                  onUpdate(field.id, { color: event.target.value })
+                }
+              />
+            </div>
           </label>
         </div>
 
@@ -227,11 +287,19 @@ function FieldCard({
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-2 text-xs text-white/45">
             X position
-            <Input value={Math.round(field.x)} readOnly />
+            <Input
+              inputMode="numeric"
+              value={Math.round(field.x)}
+              onChange={(event) => updateIntegerValue('x', event.target.value)}
+            />
           </label>
           <label className="flex flex-col gap-2 text-xs text-white/45">
             Y position
-            <Input value={Math.round(field.y)} readOnly />
+            <Input
+              inputMode="numeric"
+              value={Math.round(field.y)}
+              onChange={(event) => updateIntegerValue('y', event.target.value)}
+            />
           </label>
         </div>
       </CardContent>
@@ -293,6 +361,9 @@ function CanvasEditor({
   const transformerRef = useRef<Konva.Transformer>(null)
   const textRefs = useRef<Record<string, Konva.Text | null>>({})
   const [containerSize, setContainerSize] = useState({ width: 900, height: 650 })
+  const [gridEnabled, setGridEnabled] = useState(false)
+  const [snapEnabled, setSnapEnabled] = useState(false)
+  const [zoom, setZoom] = useState(1)
   const templateImage = useTemplateImage(templateFile)
 
   const templateSize = useMemo(
@@ -307,9 +378,40 @@ function CanvasEditor({
     (containerSize.width - 80) / templateSize.width,
     (containerSize.height - 80) / templateSize.height,
   )
-  const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1
+  const fitScale = Number.isFinite(scale) && scale > 0 ? scale : 1
+  const safeScale = fitScale * zoom
   const offsetX = (containerSize.width - templateSize.width * safeScale) / 2
   const offsetY = (containerSize.height - templateSize.height * safeScale) / 2
+  const gridLines = useMemo(() => {
+    const lines: Array<{ key: string; points: number[] }> = []
+    const step = 50
+
+    for (let x = 0; x <= templateSize.width; x += step) {
+      lines.push({
+        key: `x-${x}`,
+        points: [
+          offsetX + x * safeScale,
+          offsetY,
+          offsetX + x * safeScale,
+          offsetY + templateSize.height * safeScale,
+        ],
+      })
+    }
+
+    for (let y = 0; y <= templateSize.height; y += step) {
+      lines.push({
+        key: `y-${y}`,
+        points: [
+          offsetX,
+          offsetY + y * safeScale,
+          offsetX + templateSize.width * safeScale,
+          offsetY + y * safeScale,
+        ],
+      })
+    }
+
+    return lines
+  }, [offsetX, offsetY, safeScale, templateSize.height, templateSize.width])
 
   useEffect(() => {
     const container = containerRef.current
@@ -340,6 +442,44 @@ function CanvasEditor({
 
   return (
     <section className="flex min-w-0 flex-1 flex-col bg-[#0f0f0f]">
+      <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
+        <div className="flex items-center gap-2">
+          <p className="mr-3 text-xs text-white/40">Preview uses first entry</p>
+          <Button
+            variant={gridEnabled ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => setGridEnabled((current) => !current)}
+          >
+            Grid
+          </Button>
+          <Button
+            variant={snapEnabled ? 'primary' : 'secondary'}
+            size="sm"
+            onClick={() => setSnapEnabled((current) => !current)}
+          >
+            Snap
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setZoom((current) => Math.max(0.5, current - 0.1))}
+          >
+            -
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => setZoom(1)}>
+            Fit
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setZoom((current) => Math.min(2, current + 0.1))}
+          >
+            +
+          </Button>
+        </div>
+      </div>
       <div ref={containerRef} className="min-h-0 flex-1">
         <Stage width={containerSize.width} height={containerSize.height}>
           <Layer>
@@ -363,6 +503,19 @@ function CanvasEditor({
               />
             )}
 
+            {gridEnabled ? (
+              <Group listening={false}>
+                {gridLines.map((line) => (
+                  <Line
+                    key={line.key}
+                    points={line.points}
+                    stroke="rgba(255,255,255,0.09)"
+                    strokeWidth={1}
+                  />
+                ))}
+              </Group>
+            ) : null}
+
             {fields.map((field) => (
               <Text
                 key={field.id}
@@ -377,21 +530,28 @@ function CanvasEditor({
                 fontSize={field.fontSize * safeScale}
                 fill={field.color}
                 align={field.align}
-                draggable
+                draggable={!field.locked}
                 onClick={() => onSelect(field.id)}
                 onTap={() => onSelect(field.id)}
                 onDragStart={() => onSelect(field.id)}
                 onDragEnd={(event) => {
+                  const nextX = (event.target.x() - offsetX) / safeScale
+                  const nextY = (event.target.y() - offsetY) / safeScale
+
                   onUpdate(field.id, {
-                    x: (event.target.x() - offsetX) / safeScale,
-                    y: (event.target.y() - offsetY) / safeScale,
+                    x: snapEnabled
+                      ? Math.round(nextX / 10) * 10
+                      : Math.round(nextX),
+                    y: snapEnabled
+                      ? Math.round(nextY / 10) * 10
+                      : Math.round(nextY),
                   })
                 }}
                 onTransformEnd={(event) => {
                   const node = event.target as Konva.Text
                   const nextFontSize = Math.max(
                     8,
-                    (field.fontSize * node.scaleY()),
+                    Math.round(field.fontSize * node.scaleY()),
                   )
                   const nextWidth = Math.max(80, field.width * node.scaleX())
 
@@ -399,8 +559,8 @@ function CanvasEditor({
                   node.scaleY(1)
 
                   onUpdate(field.id, {
-                    x: (node.x() - offsetX) / safeScale,
-                    y: (node.y() - offsetY) / safeScale,
+                    x: Math.round((node.x() - offsetX) / safeScale),
+                    y: Math.round((node.y() - offsetY) / safeScale),
                     width: nextWidth,
                     fontSize: nextFontSize,
                   })
@@ -420,6 +580,7 @@ function CanvasEditor({
               borderStroke="#3b82f6"
               anchorStroke="#3b82f6"
               anchorFill="#0f0f0f"
+              resizeEnabled={!fields.find((field) => field.id === selectedFieldId)?.locked}
             />
           </Layer>
         </Stage>
