@@ -1,0 +1,34 @@
+{
+  "fields": [
+    {
+      "type": "name",
+      "text": "{{name}}",
+      "x": 360,
+      "y": 330,
+      "fontSize": 46,
+      "color": "#ffffff",
+      "fontFamily": "arial.ttf",
+      "maxWidth": 520
+    },
+    {
+      "type": "college",
+      "text": "{{college}}",
+      "x": 360,
+      "y": 410,
+      "fontSize": 24,
+      "color": "#ffffff",
+      "fontFamily": "arial.ttf",
+      "maxWidth": 520
+    },
+    {
+      "type": "event",
+      "text": "{{event}}",
+      "x": 360,
+      "y": 455,
+      "fontSize": 22,
+      "color": "#ffffff",
+      "fontFamily": "arial.ttf",
+      "maxWidth": 520
+    }
+  ]
+}
