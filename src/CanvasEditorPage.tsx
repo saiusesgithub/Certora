@@ -39,6 +39,7 @@ type CanvasEditorPageProps = {
   pastedText: string
   collegeName: string
   eventName: string
+  onGenerate: () => void
 }
 
 type FieldCardProps = {
@@ -379,6 +380,7 @@ type CanvasEditorProps = {
   onUpdate: (id: FieldId, updates: Partial<EditorField>) => void
   onRegisterTextNode: (id: FieldId, node: Konva.Text | null) => void
   onTemplateSizeChange: (size: typeof defaultTemplateSize) => void
+  onGenerate: () => void
 }
 
 function CanvasEditor({
@@ -389,6 +391,7 @@ function CanvasEditor({
   onUpdate,
   onRegisterTextNode,
   onTemplateSizeChange,
+  onGenerate,
 }: CanvasEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const transformerRef = useRef<Konva.Transformer>(null)
@@ -665,7 +668,7 @@ function CanvasEditor({
       </div>
 
       <div className="flex justify-center border-t border-white/10 p-5">
-        <Button variant="primary" size="lg">
+        <Button variant="primary" size="lg" onClick={onGenerate}>
           Generate Certificates
         </Button>
       </div>
@@ -678,6 +681,7 @@ function CanvasEditorPage({
   pastedText,
   collegeName,
   eventName,
+  onGenerate,
 }: CanvasEditorPageProps) {
   const textNodesRef = useRef<Record<string, Konva.Text | null>>({})
   const [fields, setFields] = useState(() =>
@@ -741,6 +745,7 @@ function CanvasEditorPage({
           textNodesRef.current[id] = node
         }}
         onTemplateSizeChange={setTemplateSize}
+        onGenerate={onGenerate}
       />
     </main>
   )
