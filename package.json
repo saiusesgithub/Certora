@@ -6,11 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "backend:install": "python -m pip install --no-cache-dir --target backend/vendor -r backend/generator/requirements.txt",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "@pikoloo/darwin-ui": "^2.0.0",
+    "@tauri-apps/api": "^2.11.0",
     "framer-motion": "^12.38.0",
     "konva": "^10.3.0",
     "react": "^19.2.5",
@@ -20,6 +25,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tailwindcss/postcss": "^4.2.4",
+    "@tauri-apps/cli": "^2.9.0",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

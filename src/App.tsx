@@ -146,6 +146,19 @@ function downloadBlob(blob: Blob) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
+async function openDownloadsFolder() {
+  if (!('__TAURI_INTERNALS__' in window)) {
+    return
+  }
+
+  try {
+    const { invoke } = await import('@tauri-apps/api/core')
+    await invoke('open_downloads_folder')
+  } catch (error) {
+    console.error('Could not open Downloads folder', error)
+  }
+}
+
 function App() {
   const [page, setPage] = useState<'landing' | 'templates' | 'data' | 'editor'>(
     'landing',
@@ -222,7 +235,7 @@ function App() {
 
       setGenerationTotal(Math.max(1, names.length))
 
-      const response = await fetch('http://localhost:8000/generate', {
+      const response = await fetch('http://127.0.0.1:8000/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -272,9 +285,10 @@ function App() {
     }
   }
 
-  function downloadLatestZip() {
+  async function downloadLatestZip() {
     if (zipBlob) {
       downloadBlob(zipBlob)
+      await openDownloadsFolder()
     }
   }
 

@@ -37,9 +37,15 @@ def resolve_font_path(font_family):
 
     normalized = font_family.strip().lower()
     mapped_font = FONT_FILES.get(normalized, font_family)
+    backend_font_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "fonts", mapped_font)
+    )
     project_font_path = os.path.abspath(
         os.path.join(os.path.dirname(__file__), "..", "..", "public", "fonts", mapped_font)
     )
+
+    if os.path.exists(backend_font_path):
+        return backend_font_path
 
     if os.path.exists(project_font_path):
         return project_font_path
