@@ -380,6 +380,7 @@ type CanvasEditorProps = {
   onUpdate: (id: FieldId, updates: Partial<EditorField>) => void
   onRegisterTextNode: (id: FieldId, node: Konva.Text | null) => void
   onTemplateSizeChange: (size: typeof defaultTemplateSize) => void
+  onScaleChange: (scale: number) => void
   onGenerate: () => void
 }
 
@@ -391,6 +392,7 @@ function CanvasEditor({
   onUpdate,
   onRegisterTextNode,
   onTemplateSizeChange,
+  onScaleChange,
   onGenerate,
 }: CanvasEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -428,6 +430,10 @@ function CanvasEditor({
     () => ({ width: templateSize.width, height: templateSize.height }),
     [templateSize.height, templateSize.width],
   )
+
+  useEffect(() => {
+    onScaleChange(safeScale)
+  }, [onScaleChange, safeScale])
   useEffect(() => {
     const container = containerRef.current
     if (!container) {
@@ -621,20 +627,25 @@ function CanvasEditor({
                 }}
                 onTransformEnd={(event) => {
                   const node = event.target as Konva.Text
+                  const scaleX = node.scaleX()
                   const nextFontSize = Math.max(
                     8,
-                    Math.round(field.fontSize * node.scaleX()),
+                    Math.round(field.fontSize * scaleX),
                   )
+                  const nextX = Math.round((node.x() - offsetX) / safeScale)
+                  const nextY = Math.round((node.y() - offsetY) / safeScale)
 
                   node.scaleX(1)
                   node.scaleY(1)
+                  node.fontSize(nextFontSize * safeScale)
+                  node.getLayer()?.batchDraw()
 
                   onUpdate(field.id, {
                     ...clampFieldPosition(
                       field,
                       {
-                        x: Math.round((node.x() - offsetX) / safeScale),
-                        y: Math.round((node.y() - offsetY) / safeScale),
+                        x: nextX,
+                        y: nextY,
                         fontSize: nextFontSize,
                       },
                       templateBounds,
@@ -659,9 +670,13 @@ function CanvasEditor({
               resizeEnabled={!fields.find((field) => field.id === selectedFieldId)?.locked}
               padding={0}
               ignoreStroke
+              flipEnabled={false}
               anchorSize={7}
               borderStrokeWidth={1}
               anchorStrokeWidth={1}
+              boundBoxFunc={(oldBox, newBox) =>
+                newBox.width < 8 || newBox.height < 8 ? oldBox : newBox
+              }
             />
           </Layer>
         </Stage>
@@ -689,6 +704,7 @@ function CanvasEditorPage({
   )
   const [selectedFieldId, setSelectedFieldId] = useState<FieldId>('name')
   const [templateSize, setTemplateSize] = useState(defaultTemplateSize)
+  const [viewportScale, setViewportScale] = useState(1)
 
   function updateField(id: FieldId, updates: Partial<EditorField>) {
     setFields((currentFields) =>
@@ -716,8 +732,10 @@ function CanvasEditorPage({
 
     const node = textNodesRef.current[id]
     const rect = node?.getClientRect({ skipTransform: true })
-    const fieldWidth = rect?.width ?? getFieldWidth(field)
-    const fieldHeight = rect?.height ?? getFieldHeight(field)
+    const fieldWidth = rect?.width ? rect.width / viewportScale : getFieldWidth(field)
+    const fieldHeight = rect?.height
+      ? rect.height / viewportScale
+      : getFieldHeight(field)
 
     updateField(id, {
       x: Math.round(templateSize.width / 2 - fieldWidth / 2),
@@ -745,6 +763,7 @@ function CanvasEditorPage({
           textNodesRef.current[id] = node
         }}
         onTemplateSizeChange={setTemplateSize}
+        onScaleChange={setViewportScale}
         onGenerate={() => onGenerate(fields)}
       />
     </main>

@@ -2,17 +2,45 @@ import os
 
 from PIL import Image, ImageDraw, ImageFont
 
-from .utils import hex_to_rgb, replace_placeholders, safe_filename
+try:
+    from .utils import hex_to_rgb, replace_placeholders, safe_filename
+except ImportError:
+    from utils import hex_to_rgb, replace_placeholders, safe_filename
+
+
+FONT_FILES = {
+    "arial": "arial.ttf",
+    "inter": "arial.ttf",
+    "georgia": "georgia.ttf",
+    "times new roman": "times.ttf",
+}
+
+
+def resolve_font_path(font_family):
+    if not font_family:
+        return "arial.ttf"
+
+    if os.path.exists(font_family):
+        return font_family
+
+    normalized = font_family.strip().lower()
+    mapped_font = FONT_FILES.get(normalized, font_family)
+    windows_font_path = os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "Fonts", mapped_font)
+
+    if os.path.exists(windows_font_path):
+        return windows_font_path
+
+    return mapped_font
 
 
 def load_font(font_family, font_size):
     try:
-        if font_family and os.path.exists(font_family):
-            return ImageFont.truetype(font_family, font_size)
-
-        return ImageFont.truetype(font_family or "arial.ttf", font_size)
+        return ImageFont.truetype(resolve_font_path(font_family), font_size)
     except OSError:
-        return ImageFont.load_default()
+        try:
+            return ImageFont.truetype(resolve_font_path("arial"), font_size)
+        except OSError:
+            return ImageFont.load_default()
 
 
 def fit_text(draw, text, font_family, font_size, max_width):

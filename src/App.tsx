@@ -73,13 +73,6 @@ function SuccessScreen({ onDownload, onGenerateMore }: SuccessScreenProps) {
           >
             Download ZIP
           </Button>
-          <Button
-            variant="secondary"
-            size="lg"
-            onClick={() => console.log('Open Folder')}
-          >
-            Open Folder
-          </Button>
           <Button variant="secondary" size="lg" onClick={onGenerateMore}>
             Generate More
           </Button>
