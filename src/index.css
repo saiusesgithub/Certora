@@ -1,6 +1,66 @@
 @import '@pikoloo/darwin-ui/styles.css';
 @source '../node_modules/@pikoloo/darwin-ui/dist';
 
+@font-face {
+  font-family: 'Merriweather';
+  src: url('/fonts/Merriweather_24pt-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Raleway';
+  src: url('/fonts/Raleway-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Bebas Neue';
+  src: url('/fonts/BebasNeue-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Great Vibes';
+  src: url('/fonts/GreatVibes-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Montserrat';
+  src: url('/fonts/Montserrat-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Montserrat Alternates';
+  src: url('/fonts/MontserratAlternates-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Pacifico';
+  src: url('/fonts/Pacifico-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Playfair Display';
+  src: url('/fonts/PlayfairDisplay-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('/fonts/Poppins-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Satisfy';
+  src: url('/fonts/Satisfy-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Cause';
+  src: url('/fonts/Cause-Regular.ttf') format('truetype');
+}
+
+@font-face {
+  font-family: 'Cinzel';
+  src: url('/fonts/Cinzel-Regular.ttf') format('truetype');
+}
+
 :root {
   color: #ffffff;
   background: #0f0f0f;

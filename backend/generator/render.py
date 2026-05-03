@@ -13,6 +13,18 @@ FONT_FILES = {
     "inter": "arial.ttf",
     "georgia": "georgia.ttf",
     "times new roman": "times.ttf",
+    "merriweather": "Merriweather_24pt-Regular.ttf",
+    "raleway": "Raleway-Regular.ttf",
+    "bebas neue": "BebasNeue-Regular.ttf",
+    "great vibes": "GreatVibes-Regular.ttf",
+    "montserrat": "Montserrat-Regular.ttf",
+    "montserrat alternates": "MontserratAlternates-Regular.ttf",
+    "pacifico": "Pacifico-Regular.ttf",
+    "playfair display": "PlayfairDisplay-Regular.ttf",
+    "poppins": "Poppins-Regular.ttf",
+    "satisfy": "Satisfy-Regular.ttf",
+    "cause": "Cause-Regular.ttf",
+    "cinzel": "Cinzel-Regular.ttf",
 }
 
 
@@ -25,6 +37,13 @@ def resolve_font_path(font_family):
 
     normalized = font_family.strip().lower()
     mapped_font = FONT_FILES.get(normalized, font_family)
+    project_font_path = os.path.abspath(
+        os.path.join(os.path.dirname(__file__), "..", "..", "public", "fonts", mapped_font)
+    )
+
+    if os.path.exists(project_font_path):
+        return project_font_path
+
     windows_font_path = os.path.join(os.environ.get("WINDIR", "C:\\Windows"), "Fonts", mapped_font)
 
     if os.path.exists(windows_font_path):

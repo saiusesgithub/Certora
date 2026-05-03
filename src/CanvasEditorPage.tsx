@@ -16,7 +16,6 @@ import {
   CardHeader,
   CardTitle,
   Input,
-  Select,
 } from '@pikoloo/darwin-ui'
 
 type FieldId = 'name' | 'college' | 'event'
@@ -57,13 +56,76 @@ const defaultTemplateSize = {
 }
 
 const fontOptions = [
-  { value: 'Inter', label: 'Inter' },
-  { value: 'Georgia', label: 'Georgia' },
-  { value: 'Times New Roman', label: 'Times New Roman' },
   { value: 'Arial', label: 'Arial' },
+  { value: 'Merriweather', label: 'Merriweather' },
+  { value: 'Raleway', label: 'Raleway' },
+  { value: 'Bebas Neue', label: 'Bebas Neue' },
+  { value: 'Great Vibes', label: 'Great Vibes' },
+  { value: 'Montserrat', label: 'Montserrat' },
+  { value: 'Montserrat Alternates', label: 'Montserrat Alternates' },
+  { value: 'Pacifico', label: 'Pacifico' },
+  { value: 'Playfair Display', label: 'Playfair Display' },
+  { value: 'Poppins', label: 'Poppins' },
+  { value: 'Satisfy', label: 'Satisfy' },
+  { value: 'Cause', label: 'Cause' },
+  { value: 'Cinzel', label: 'Cinzel' },
 ]
 
+const fontFiles: Record<string, string> = {
+  Merriweather: '/fonts/Merriweather_24pt-Regular.ttf',
+  Raleway: '/fonts/Raleway-Regular.ttf',
+  'Bebas Neue': '/fonts/BebasNeue-Regular.ttf',
+  'Great Vibes': '/fonts/GreatVibes-Regular.ttf',
+  Montserrat: '/fonts/Montserrat-Regular.ttf',
+  'Montserrat Alternates': '/fonts/MontserratAlternates-Regular.ttf',
+  Pacifico: '/fonts/Pacifico-Regular.ttf',
+  'Playfair Display': '/fonts/PlayfairDisplay-Regular.ttf',
+  Poppins: '/fonts/Poppins-Regular.ttf',
+  Satisfy: '/fonts/Satisfy-Regular.ttf',
+  Cause: '/fonts/Cause-Regular.ttf',
+  Cinzel: '/fonts/Cinzel-Regular.ttf',
+}
+
+const fontLoadPromises = new Map<string, Promise<void>>()
 const snapThreshold = 8
+
+function getCanvasFontFamily(fontFamily: string) {
+  return fontFamily.includes(' ') ? `"${fontFamily}"` : fontFamily
+}
+
+function ensureFontFace(fontFamily: string) {
+  const fontUrl = fontFiles[fontFamily]
+
+  if (!fontUrl || !('FontFace' in window) || !('fonts' in document)) {
+    return Promise.resolve()
+  }
+
+  const existingPromise = fontLoadPromises.get(fontFamily)
+
+  if (existingPromise) {
+    return existingPromise
+  }
+
+  const nextPromise = new FontFace(fontFamily, `url(${fontUrl})`)
+    .load()
+    .then((fontFace) => {
+      document.fonts.add(fontFace)
+    })
+
+  fontLoadPromises.set(fontFamily, nextPromise)
+
+  return nextPromise
+}
+
+async function loadCanvasFont(fontFamily: string, fontSize: number) {
+  if (!('fonts' in document)) {
+    return
+  }
+
+  await ensureFontFace(fontFamily)
+  await document.fonts.load(`${fontSize}px ${getCanvasFontFamily(fontFamily)}`)
+  await document.fonts.ready
+}
 
 function clampValue(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max)
@@ -121,7 +183,7 @@ function createInitialFields(
       optional: false,
       x: 360,
       y: 330,
-      fontFamily: 'Georgia',
+      fontFamily: 'Cinzel',
       fontSize: 46,
       color: '#ffffff',
       locked: false,
@@ -136,7 +198,7 @@ function createInitialFields(
       optional: true,
       x: 360,
       y: 410,
-      fontFamily: 'Inter',
+      fontFamily: 'Montserrat',
       fontSize: 24,
       color: '#ffffff',
       locked: false,
@@ -151,7 +213,7 @@ function createInitialFields(
       optional: true,
       x: 360,
       y: 455,
-      fontFamily: 'Inter',
+      fontFamily: 'Montserrat',
       fontSize: 22,
       color: '#ffffff',
       locked: false,
@@ -169,12 +231,28 @@ function useTemplateImage(templateFile: File | null) {
       return
     }
 
-    const url = URL.createObjectURL(templateFile)
-    const nextImage = new window.Image()
-    nextImage.onload = () => setImage(nextImage)
-    nextImage.src = url
+    let cancelled = false
+    const reader = new FileReader()
 
-    return () => URL.revokeObjectURL(url)
+    reader.onload = () => {
+      if (cancelled) {
+        return
+      }
+
+      const nextImage = new window.Image()
+      nextImage.onload = () => {
+        if (!cancelled) {
+          setImage(nextImage)
+        }
+      }
+      nextImage.src = String(reader.result)
+    }
+
+    reader.readAsDataURL(templateFile)
+
+    return () => {
+      cancelled = true
+    }
   }, [templateFile])
 
   return templateFile?.type.startsWith('image/') ? image : null
@@ -188,6 +266,8 @@ function FieldCard({
   onCenter,
   onRemove,
 }: FieldCardProps) {
+  const [fontMenuOpen, setFontMenuOpen] = useState(false)
+
   function updateIntegerValue(key: 'fontSize' | 'x' | 'y', value: string) {
     const parsedValue = Number.parseInt(value, 10)
 
@@ -238,13 +318,49 @@ function FieldCard({
       <CardContent className="flex flex-col gap-3">
         <label className="flex flex-col gap-2 text-xs text-white/45">
           Font family
-          <Select
-            value={field.fontFamily}
-            options={fontOptions}
-            onChange={(event) =>
-              onUpdate(field.id, { fontFamily: event.target.value })
-            }
-          />
+          <div className="relative">
+            <Button
+              variant="secondary"
+              className="flex w-full justify-between"
+              onClick={(event) => {
+                event.stopPropagation()
+                setFontMenuOpen((current) => !current)
+              }}
+            >
+              <span style={{ fontFamily: field.fontFamily }}>
+                {field.fontFamily}
+              </span>
+              <span className="text-white/40">v</span>
+            </Button>
+            {fontMenuOpen ? (
+              <Card
+                className="absolute left-0 right-0 top-12 z-50 max-h-64 overflow-y-auto border border-white/10 bg-[#181818] p-1 shadow-xl"
+                glass
+                onClick={(event) => event.stopPropagation()}
+              >
+                {fontOptions.map((option) => (
+                  <Button
+                    key={option.value}
+                    variant={
+                      field.fontFamily === option.value
+                        ? 'primary'
+                        : 'secondary'
+                    }
+                    className="mb-1 flex w-full justify-start"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onUpdate(field.id, { fontFamily: option.value })
+                      setFontMenuOpen(false)
+                    }}
+                  >
+                    <span style={{ fontFamily: option.value }}>
+                      {option.label}
+                    </span>
+                  </Button>
+                ))}
+              </Card>
+            ) : null}
+          </div>
         </label>
 
         <div className="grid grid-cols-[1fr_auto] gap-3">
@@ -461,6 +577,35 @@ function CanvasEditor({
     }
   }, [fields, selectedFieldId])
 
+  useEffect(() => {
+    let cancelled = false
+
+    async function loadFontsAndRedraw() {
+      await Promise.all(
+        fields.map((field) =>
+          loadCanvasFont(field.fontFamily, field.fontSize * safeScale),
+        ),
+      )
+
+      if (!cancelled) {
+        fields.forEach((field) => {
+          const node = textRefs.current[field.id]
+          if (node) {
+            node.fontFamily(getCanvasFontFamily(field.fontFamily))
+            node.fontSize(field.fontSize * safeScale)
+          }
+        })
+        transformerRef.current?.getLayer()?.batchDraw()
+      }
+    }
+
+    void loadFontsAndRedraw()
+
+    return () => {
+      cancelled = true
+    }
+  }, [fields, safeScale])
+
   function getVisualSize(field: EditorField) {
     const node = textRefs.current[field.id]
     const rect = node?.getClientRect({ skipTransform: true })
@@ -582,7 +727,7 @@ function CanvasEditor({
 
             {fields.map((field) => (
               <Text
-                key={field.id}
+                key={`${field.id}-${field.fontFamily}`}
                 ref={(node) => {
                   textRefs.current[field.id] = node
                   onRegisterTextNode(field.id, node)
@@ -590,7 +735,7 @@ function CanvasEditor({
                 x={offsetX + field.x * safeScale}
                 y={offsetY + field.y * safeScale}
                 text={field.value}
-                fontFamily={field.fontFamily}
+                fontFamily={getCanvasFontFamily(field.fontFamily)}
                 fontSize={field.fontSize * safeScale}
                 fill={field.color}
                 draggable={!field.locked}
