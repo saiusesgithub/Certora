@@ -1,6 +1,10 @@
 import { Button } from '@pikoloo/darwin-ui'
 
-function Landing() {
+type LandingProps = {
+  onGetStarted: () => void
+}
+
+function Landing({ onGetStarted }: LandingProps) {
   return (
     <main className="relative flex min-h-screen items-center justify-center px-6">
       <section className="flex flex-col items-center gap-6 text-center">
@@ -13,7 +17,7 @@ function Landing() {
           </p>
         </div>
 
-        <Button variant="primary" size="lg">
+        <Button variant="primary" size="lg" onClick={onGetStarted}>
           Get Started
         </Button>
       </section>
