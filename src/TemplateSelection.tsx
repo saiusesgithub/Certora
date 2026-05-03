@@ -12,7 +12,15 @@ import {
 
 const acceptedTemplateTypes = '.png,.jpg,.jpeg,.pdf'
 
-function UploadTemplateCard() {
+type TemplateSelectionProps = {
+  onTemplateSelected: () => void
+}
+
+type UploadTemplateCardProps = {
+  onTemplateSelected: () => void
+}
+
+function UploadTemplateCard({ onTemplateSelected }: UploadTemplateCardProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -20,6 +28,7 @@ function UploadTemplateCard() {
   function handleSelectedFile(file?: File) {
     if (file) {
       setSelectedFile(file)
+      onTemplateSelected()
     }
   }
 
@@ -86,7 +95,7 @@ function UploadTemplateCard() {
   )
 }
 
-function TemplateGalleryCard() {
+function TemplateGalleryCard({ onTemplateSelected }: TemplateSelectionProps) {
   return (
     <Card className="w-full" glass>
       <CardHeader>
@@ -94,7 +103,7 @@ function TemplateGalleryCard() {
         <CardDescription>Choose from pre-made templates</CardDescription>
       </CardHeader>
       <CardContent>
-        <Button variant="secondary" fullWidth>
+        <Button variant="secondary" fullWidth onClick={onTemplateSelected}>
           Browse Templates
         </Button>
       </CardContent>
@@ -102,12 +111,12 @@ function TemplateGalleryCard() {
   )
 }
 
-function TemplateSelection() {
+function TemplateSelection({ onTemplateSelected }: TemplateSelectionProps) {
   return (
     <main className="flex min-h-screen items-center justify-center px-6 py-10">
       <section className="flex w-full max-w-xl flex-col gap-5">
-        <UploadTemplateCard />
-        <TemplateGalleryCard />
+        <UploadTemplateCard onTemplateSelected={onTemplateSelected} />
+        <TemplateGalleryCard onTemplateSelected={onTemplateSelected} />
       </section>
     </main>
   )
