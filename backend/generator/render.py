@@ -1,11 +1,8 @@
 import os
-import sys
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "vendor"))
 
 from PIL import Image, ImageDraw, ImageFont
 
-from utils import hex_to_rgb, replace_placeholders, safe_filename
+from .utils import hex_to_rgb, replace_placeholders, safe_filename
 
 
 def load_font(font_family, font_size):

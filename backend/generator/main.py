@@ -2,8 +2,12 @@ import argparse
 import os
 import zipfile
 
-from render import render_certificate
-from utils import ensure_output_dir, load_json
+try:
+    from .render import render_certificate
+    from .utils import ensure_output_dir, load_json
+except ImportError:
+    from render import render_certificate
+    from utils import ensure_output_dir, load_json
 
 
 def create_zip(file_paths, zip_path):
@@ -36,6 +40,46 @@ def generate_certificates(
     generated_files = []
 
     for name in names:
+        if not str(name).strip():
+            continue
+
+        generated_files.append(
+            render_certificate(
+                background_path=background_path,
+                fields=fields,
+                name=str(name).strip(),
+                output_dir=output_dir,
+                college=college,
+                event=event,
+            )
+        )
+
+    if not generated_files:
+        raise ValueError("No valid names were provided")
+
+    zip_path = os.path.join(output_dir, "certificates.zip")
+    create_zip(generated_files, zip_path)
+    return zip_path
+
+
+def generate_certificates_from_data(
+    background_path,
+    fields,
+    data,
+    output_dir,
+    college="",
+    event="",
+):
+    if not isinstance(data, list):
+        raise ValueError("Data must be an array of names")
+
+    if not isinstance(fields, list) or not fields:
+        raise ValueError("Fields must be a non-empty array")
+
+    ensure_output_dir(output_dir)
+    generated_files = []
+
+    for name in data:
         if not str(name).strip():
             continue
 

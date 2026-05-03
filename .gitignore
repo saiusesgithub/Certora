@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 __pycache__/
+backend/vendor/
+backend/tmp/
 backend/output/*
 !backend/output/.gitkeep
 
