@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
-  Group,
   Image as KonvaImage,
   Layer,
   Line,
@@ -21,7 +20,6 @@ import {
 } from '@pikoloo/darwin-ui'
 
 type FieldId = 'name' | 'college' | 'event'
-type TextAlign = 'left' | 'center' | 'right'
 
 type EditorField = {
   id: FieldId
@@ -30,11 +28,9 @@ type EditorField = {
   optional: boolean
   x: number
   y: number
-  width: number
   fontFamily: string
   fontSize: number
   color: string
-  align: TextAlign
   locked: boolean
 }
 
@@ -50,6 +46,7 @@ type FieldCardProps = {
   selected: boolean
   onSelect: (id: FieldId) => void
   onUpdate: (id: FieldId, updates: Partial<EditorField>) => void
+  onCenter: (id: FieldId) => void
   onRemove: (id: FieldId) => void
 }
 
@@ -64,6 +61,42 @@ const fontOptions = [
   { value: 'Times New Roman', label: 'Times New Roman' },
   { value: 'Arial', label: 'Arial' },
 ]
+
+const snapThreshold = 8
+
+function clampValue(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max)
+}
+
+function getFieldHeight(field: EditorField) {
+  return field.fontSize * 1.2
+}
+
+function getFieldWidth(field: EditorField) {
+  return Math.max(field.value.length * field.fontSize * 0.55, field.fontSize)
+}
+
+function clampFieldPosition(
+  field: EditorField,
+  updates: Partial<EditorField>,
+  bounds = defaultTemplateSize,
+) {
+  const nextFontSize = updates.fontSize ?? field.fontSize
+  const nextHeight = nextFontSize * 1.2
+  const nextWidth = getFieldWidth({
+    ...field,
+    ...updates,
+    fontSize: nextFontSize,
+  })
+  const nextX = updates.x ?? field.x
+  const nextY = updates.y ?? field.y
+
+  return {
+    ...updates,
+    x: clampValue(nextX, 0, Math.max(0, bounds.width - nextWidth)),
+    y: clampValue(nextY, 0, Math.max(0, bounds.height - nextHeight)),
+  }
+}
 
 function getPreviewName(pastedText: string) {
   return (
@@ -87,11 +120,9 @@ function createInitialFields(
       optional: false,
       x: 360,
       y: 330,
-      width: 380,
       fontFamily: 'Georgia',
       fontSize: 46,
       color: '#ffffff',
-      align: 'center',
       locked: false,
     },
   ]
@@ -104,11 +135,9 @@ function createInitialFields(
       optional: true,
       x: 360,
       y: 410,
-      width: 380,
       fontFamily: 'Inter',
       fontSize: 24,
       color: '#ffffff',
-      align: 'center',
       locked: false,
     })
   }
@@ -121,11 +150,9 @@ function createInitialFields(
       optional: true,
       x: 360,
       y: 455,
-      width: 380,
       fontFamily: 'Inter',
       fontSize: 22,
       color: '#ffffff',
-      align: 'center',
       locked: false,
     })
   }
@@ -157,13 +184,14 @@ function FieldCard({
   selected,
   onSelect,
   onUpdate,
+  onCenter,
   onRemove,
 }: FieldCardProps) {
   function updateIntegerValue(key: 'fontSize' | 'x' | 'y', value: string) {
     const parsedValue = Number.parseInt(value, 10)
 
     if (Number.isFinite(parsedValue)) {
-      onUpdate(field.id, { [key]: parsedValue })
+      onUpdate(field.id, clampFieldPosition(field, { [key]: parsedValue }))
     }
   }
 
@@ -171,12 +199,14 @@ function FieldCard({
     <Card
       className={[
         'w-full border',
-        selected ? 'border-blue-500/60' : 'border-white/10',
+        selected
+          ? 'border-blue-400/70 bg-blue-500/[0.06] shadow-[0_0_0_1px_rgba(96,165,250,0.18)]'
+          : 'border-white/10',
       ].join(' ')}
       glass
       onClick={() => onSelect(field.id)}
     >
-      <CardHeader className="flex flex-row items-center justify-between gap-3 pb-3">
+      <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
         <CardTitle className="text-base">{field.label}</CardTitle>
         <div className="flex items-center gap-2">
           <Button
@@ -190,20 +220,21 @@ function FieldCard({
             Lock
           </Button>
           {field.optional ? (
-            <Button
-              variant="ghost"
-              size="sm"
+            <button
+              type="button"
+              aria-label={`Remove ${field.label}`}
+              className="flex h-6 w-6 items-center justify-center rounded-full bg-white/5 text-sm leading-none text-white/60 hover:bg-[#ff5f57]/85 hover:text-white"
               onClick={(event) => {
                 event.stopPropagation()
                 onRemove(field.id)
               }}
             >
-              X
-            </Button>
+              ×
+            </button>
           ) : null}
         </div>
       </CardHeader>
-      <CardContent className="flex flex-col gap-4">
+      <CardContent className="flex flex-col gap-3">
         <label className="flex flex-col gap-2 text-xs text-white/45">
           Font family
           <Select
@@ -231,7 +262,9 @@ function FieldCard({
                 size="sm"
                 onClick={() =>
                   onUpdate(field.id, {
-                    fontSize: Math.max(8, Math.round(field.fontSize) - 10),
+                    ...clampFieldPosition(field, {
+                      fontSize: Math.max(8, Math.round(field.fontSize) - 10),
+                    }),
                   })
                 }
               >
@@ -241,7 +274,12 @@ function FieldCard({
                 variant="secondary"
                 size="sm"
                 onClick={() =>
-                  onUpdate(field.id, { fontSize: Math.round(field.fontSize) + 10 })
+                  onUpdate(
+                    field.id,
+                    clampFieldPosition(field, {
+                      fontSize: Math.round(field.fontSize) + 10,
+                    }),
+                  )
                 }
               >
                 +
@@ -268,21 +306,9 @@ function FieldCard({
           </label>
         </div>
 
-        <div className="flex flex-col gap-2">
-          <p className="text-xs text-white/45">Alignment</p>
-          <div className="grid grid-cols-3 gap-2">
-            {(['left', 'center', 'right'] as TextAlign[]).map((align) => (
-              <Button
-                key={align}
-                variant={field.align === align ? 'primary' : 'secondary'}
-                size="sm"
-                onClick={() => onUpdate(field.id, { align })}
-              >
-                {align}
-              </Button>
-            ))}
-          </div>
-        </div>
+        <Button variant="secondary" size="sm" onClick={() => onCenter(field.id)}>
+          Center
+        </Button>
 
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-2 text-xs text-white/45">
@@ -312,6 +338,7 @@ type SidebarPanelProps = {
   selectedFieldId: FieldId
   onSelect: (id: FieldId) => void
   onUpdate: (id: FieldId, updates: Partial<EditorField>) => void
+  onCenter: (id: FieldId) => void
   onRemove: (id: FieldId) => void
 }
 
@@ -320,6 +347,7 @@ function SidebarPanel({
   selectedFieldId,
   onSelect,
   onUpdate,
+  onCenter,
   onRemove,
 }: SidebarPanelProps) {
   return (
@@ -335,6 +363,7 @@ function SidebarPanel({
           selected={field.id === selectedFieldId}
           onSelect={onSelect}
           onUpdate={onUpdate}
+          onCenter={onCenter}
           onRemove={onRemove}
         />
       ))}
@@ -348,6 +377,8 @@ type CanvasEditorProps = {
   templateFile: File | null
   onSelect: (id: FieldId) => void
   onUpdate: (id: FieldId, updates: Partial<EditorField>) => void
+  onRegisterTextNode: (id: FieldId, node: Konva.Text | null) => void
+  onTemplateSizeChange: (size: typeof defaultTemplateSize) => void
 }
 
 function CanvasEditor({
@@ -356,14 +387,18 @@ function CanvasEditor({
   templateFile,
   onSelect,
   onUpdate,
+  onRegisterTextNode,
+  onTemplateSizeChange,
 }: CanvasEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const transformerRef = useRef<Konva.Transformer>(null)
   const textRefs = useRef<Record<string, Konva.Text | null>>({})
   const [containerSize, setContainerSize] = useState({ width: 900, height: 650 })
-  const [gridEnabled, setGridEnabled] = useState(false)
-  const [snapEnabled, setSnapEnabled] = useState(false)
   const [zoom, setZoom] = useState(1)
+  const [activeGuides, setActiveGuides] = useState({
+    vertical: false,
+    horizontal: false,
+  })
   const templateImage = useTemplateImage(templateFile)
 
   const templateSize = useMemo(
@@ -374,6 +409,10 @@ function CanvasEditor({
     [templateImage],
   )
 
+  useEffect(() => {
+    onTemplateSizeChange(templateSize)
+  }, [onTemplateSizeChange, templateSize])
+
   const scale = Math.min(
     (containerSize.width - 80) / templateSize.width,
     (containerSize.height - 80) / templateSize.height,
@@ -382,37 +421,10 @@ function CanvasEditor({
   const safeScale = fitScale * zoom
   const offsetX = (containerSize.width - templateSize.width * safeScale) / 2
   const offsetY = (containerSize.height - templateSize.height * safeScale) / 2
-  const gridLines = useMemo(() => {
-    const lines: Array<{ key: string; points: number[] }> = []
-    const step = 50
-
-    for (let x = 0; x <= templateSize.width; x += step) {
-      lines.push({
-        key: `x-${x}`,
-        points: [
-          offsetX + x * safeScale,
-          offsetY,
-          offsetX + x * safeScale,
-          offsetY + templateSize.height * safeScale,
-        ],
-      })
-    }
-
-    for (let y = 0; y <= templateSize.height; y += step) {
-      lines.push({
-        key: `y-${y}`,
-        points: [
-          offsetX,
-          offsetY + y * safeScale,
-          offsetX + templateSize.width * safeScale,
-          offsetY + y * safeScale,
-        ],
-      })
-    }
-
-    return lines
-  }, [offsetX, offsetY, safeScale, templateSize.height, templateSize.width])
-
+  const templateBounds = useMemo(
+    () => ({ width: templateSize.width, height: templateSize.height }),
+    [templateSize.height, templateSize.width],
+  )
   useEffect(() => {
     const container = containerRef.current
     if (!container) {
@@ -440,25 +452,51 @@ function CanvasEditor({
     }
   }, [fields, selectedFieldId])
 
+  function getVisualSize(field: EditorField) {
+    const node = textRefs.current[field.id]
+    const rect = node?.getClientRect({ skipTransform: true })
+
+    return {
+      width: rect?.width ? rect.width / safeScale : getFieldWidth(field),
+      height: rect?.height ? rect.height / safeScale : getFieldHeight(field),
+    }
+  }
+
+  function getSnappedPosition(field: EditorField, x: number, y: number) {
+    const fieldSize = getVisualSize(field)
+
+    if (field.locked) {
+      return {
+        x: clampValue(x, 0, Math.max(0, templateSize.width - fieldSize.width)),
+        y: clampValue(y, 0, Math.max(0, templateSize.height - fieldSize.height)),
+        vertical: false,
+        horizontal: false,
+      }
+    }
+
+    const fieldCenterX = x + fieldSize.width / 2
+    const fieldCenterY = y + fieldSize.height / 2
+    const templateCenterX = templateSize.width / 2
+    const templateCenterY = templateSize.height / 2
+    const snapToVertical = Math.abs(fieldCenterX - templateCenterX) <= snapThreshold
+    const snapToHorizontal =
+      Math.abs(fieldCenterY - templateCenterY) <= snapThreshold
+    const nextX = snapToVertical ? templateCenterX - fieldSize.width / 2 : x
+    const nextY = snapToHorizontal ? templateCenterY - fieldSize.height / 2 : y
+
+    return {
+      x: clampValue(nextX, 0, Math.max(0, templateSize.width - fieldSize.width)),
+      y: clampValue(nextY, 0, Math.max(0, templateSize.height - fieldSize.height)),
+      vertical: snapToVertical,
+      horizontal: snapToHorizontal,
+    }
+  }
+
   return (
     <section className="flex min-w-0 flex-1 flex-col bg-[#0f0f0f]">
       <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
         <div className="flex items-center gap-2">
           <p className="mr-3 text-xs text-white/40">Preview uses first entry</p>
-          <Button
-            variant={gridEnabled ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setGridEnabled((current) => !current)}
-          >
-            Grid
-          </Button>
-          <Button
-            variant={snapEnabled ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setSnapEnabled((current) => !current)}
-          >
-            Snap
-          </Button>
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -503,17 +541,34 @@ function CanvasEditor({
               />
             )}
 
-            {gridEnabled ? (
-              <Group listening={false}>
-                {gridLines.map((line) => (
-                  <Line
-                    key={line.key}
-                    points={line.points}
-                    stroke="rgba(255,255,255,0.09)"
-                    strokeWidth={1}
-                  />
-                ))}
-              </Group>
+            {activeGuides.vertical ? (
+              <Line
+                points={[
+                  offsetX + (templateSize.width / 2) * safeScale,
+                  offsetY,
+                  offsetX + (templateSize.width / 2) * safeScale,
+                  offsetY + templateSize.height * safeScale,
+                ]}
+                stroke="#3b82f6"
+                strokeWidth={1}
+                opacity={0.65}
+                listening={false}
+              />
+            ) : null}
+
+            {activeGuides.horizontal ? (
+              <Line
+                points={[
+                  offsetX,
+                  offsetY + (templateSize.height / 2) * safeScale,
+                  offsetX + templateSize.width * safeScale,
+                  offsetY + (templateSize.height / 2) * safeScale,
+                ]}
+                stroke="#3b82f6"
+                strokeWidth={1}
+                opacity={0.65}
+                listening={false}
+              />
             ) : null}
 
             {fields.map((field) => (
@@ -521,48 +576,66 @@ function CanvasEditor({
                 key={field.id}
                 ref={(node) => {
                   textRefs.current[field.id] = node
+                  onRegisterTextNode(field.id, node)
                 }}
                 x={offsetX + field.x * safeScale}
                 y={offsetY + field.y * safeScale}
-                width={field.width * safeScale}
                 text={field.value}
                 fontFamily={field.fontFamily}
                 fontSize={field.fontSize * safeScale}
                 fill={field.color}
-                align={field.align}
                 draggable={!field.locked}
                 onClick={() => onSelect(field.id)}
                 onTap={() => onSelect(field.id)}
                 onDragStart={() => onSelect(field.id)}
+                onDragMove={(event) => {
+                  const rawX = (event.target.x() - offsetX) / safeScale
+                  const rawY = (event.target.y() - offsetY) / safeScale
+                  const snappedPosition = getSnappedPosition(field, rawX, rawY)
+
+                  event.target.position({
+                    x: offsetX + snappedPosition.x * safeScale,
+                    y: offsetY + snappedPosition.y * safeScale,
+                  })
+                  setActiveGuides({
+                    vertical: snappedPosition.vertical,
+                    horizontal: snappedPosition.horizontal,
+                  })
+                }}
                 onDragEnd={(event) => {
                   const nextX = (event.target.x() - offsetX) / safeScale
                   const nextY = (event.target.y() - offsetY) / safeScale
+                  const snappedPosition = getSnappedPosition(field, nextX, nextY)
 
                   onUpdate(field.id, {
-                    x: snapEnabled
-                      ? Math.round(nextX / 10) * 10
-                      : Math.round(nextX),
-                    y: snapEnabled
-                      ? Math.round(nextY / 10) * 10
-                      : Math.round(nextY),
+                    x: Math.round(snappedPosition.x),
+                    y: Math.round(snappedPosition.y),
+                  })
+                  setActiveGuides({
+                    vertical: false,
+                    horizontal: false,
                   })
                 }}
                 onTransformEnd={(event) => {
                   const node = event.target as Konva.Text
                   const nextFontSize = Math.max(
                     8,
-                    Math.round(field.fontSize * node.scaleY()),
+                    Math.round(field.fontSize * node.scaleX()),
                   )
-                  const nextWidth = Math.max(80, field.width * node.scaleX())
 
                   node.scaleX(1)
                   node.scaleY(1)
 
                   onUpdate(field.id, {
-                    x: Math.round((node.x() - offsetX) / safeScale),
-                    y: Math.round((node.y() - offsetY) / safeScale),
-                    width: nextWidth,
-                    fontSize: nextFontSize,
+                    ...clampFieldPosition(
+                      field,
+                      {
+                        x: Math.round((node.x() - offsetX) / safeScale),
+                        y: Math.round((node.y() - offsetY) / safeScale),
+                        fontSize: nextFontSize,
+                      },
+                      templateBounds,
+                    ),
                   })
                 }}
               />
@@ -581,6 +654,11 @@ function CanvasEditor({
               anchorStroke="#3b82f6"
               anchorFill="#0f0f0f"
               resizeEnabled={!fields.find((field) => field.id === selectedFieldId)?.locked}
+              padding={0}
+              ignoreStroke
+              anchorSize={7}
+              borderStrokeWidth={1}
+              anchorStrokeWidth={1}
             />
           </Layer>
         </Stage>
@@ -601,10 +679,12 @@ function CanvasEditorPage({
   collegeName,
   eventName,
 }: CanvasEditorPageProps) {
+  const textNodesRef = useRef<Record<string, Konva.Text | null>>({})
   const [fields, setFields] = useState(() =>
     createInitialFields(pastedText, collegeName, eventName),
   )
   const [selectedFieldId, setSelectedFieldId] = useState<FieldId>('name')
+  const [templateSize, setTemplateSize] = useState(defaultTemplateSize)
 
   function updateField(id: FieldId, updates: Partial<EditorField>) {
     setFields((currentFields) =>
@@ -623,6 +703,24 @@ function CanvasEditorPage({
     }
   }
 
+  function centerField(id: FieldId) {
+    const field = fields.find((currentField) => currentField.id === id)
+
+    if (!field) {
+      return
+    }
+
+    const node = textNodesRef.current[id]
+    const rect = node?.getClientRect({ skipTransform: true })
+    const fieldWidth = rect?.width ?? getFieldWidth(field)
+    const fieldHeight = rect?.height ?? getFieldHeight(field)
+
+    updateField(id, {
+      x: Math.round(templateSize.width / 2 - fieldWidth / 2),
+      y: Math.round(templateSize.height / 2 - fieldHeight / 2),
+    })
+  }
+
   return (
     <main className="flex h-screen overflow-hidden bg-[#0f0f0f] text-white">
       <SidebarPanel
@@ -630,6 +728,7 @@ function CanvasEditorPage({
         selectedFieldId={selectedFieldId}
         onSelect={setSelectedFieldId}
         onUpdate={updateField}
+        onCenter={centerField}
         onRemove={removeField}
       />
       <CanvasEditor
@@ -638,6 +737,10 @@ function CanvasEditorPage({
         templateFile={templateFile}
         onSelect={setSelectedFieldId}
         onUpdate={updateField}
+        onRegisterTextNode={(id, node) => {
+          textNodesRef.current[id] = node
+        }}
+        onTemplateSizeChange={setTemplateSize}
       />
     </main>
   )
